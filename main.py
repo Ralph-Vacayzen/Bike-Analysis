@@ -2,10 +2,15 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 
+st.set_page_config(
+    page_title='House Bike Analysis',
+    page_icon='🚲'
+)
+
 bap = pd.read_csv('data/Bike Analysis - Properties.csv')
 ral = pd.read_csv('data/2023_DispatchActivities.csv')
 
-st.title('Bike Analysis')
+st.title('House Bike Analysis')
 st.info('An insight on the four, new bike types on Vacayzen\'s House Bike Program.')
 st.warning('Analysis is on a sample size of 20 properties per bike type.')
 
