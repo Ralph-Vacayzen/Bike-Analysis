@@ -32,7 +32,7 @@ bar   = bar[(bar['date'] >= start) & (bar['date'] <= end)]
 pivot = pd.pivot_table(bar, values='partner', index='Service', columns='type', aggfunc='count')
 
 
-st.header('Service By Type')
+st.header('Service By Type', help='Service items that occur on house bike agreements by bike type.')
 st.dataframe(pivot, use_container_width=True)
 
 left, middle_left, middle_right, right = st.columns(4)
@@ -43,7 +43,7 @@ right.metric('Yellow 360 YOLO', np.sum(pivot['Yellow 360 YOLO']))
 
 st.download_button('DOWNLOAD SERVICE BY TYPE',pivot.to_csv(),'ServiceByType.csv',use_container_width=True)
 
-st.header('Service By Type With Keywords')
+st.header('Service By Type With Keywords', help='If the sales team\'s service item note includes one of the keywords, it is counted here.')
 
 keywords = ['CHAIN','CHAIN GUARD','CHAINGUARD','TIRE','PEDAL','PEDAL ARM','PEDALARM','HANDLEBAR','HANDLE BAR','AIR']
 options = st.multiselect('Look for office notes containing the following terms:',keywords,keywords)
