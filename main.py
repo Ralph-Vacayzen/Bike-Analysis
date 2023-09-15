@@ -7,7 +7,18 @@ st.set_page_config(
     page_icon='🚲'
 )
 
-bap = pd.read_csv('data/Bike Analysis - Properties.csv')
+with st.sidebar:
+    start = st.date_input('Start Date', pd.to_datetime('01/01/2023'))
+    end   = st.date_input('End Date', pd.to_datetime('09/13/2023'))
+    isKeyword = st.toggle('Filter on Keywords',value=True)
+
+    if isKeyword:
+        keywords = ['CHAIN','CHAIN GUARD','CHAINGUARD','TIRE','PEDAL','PEDAL ARM','PEDALARM','HANDLEBAR','HANDLE BAR','AIR']
+        options = st.multiselect('Look for service instructions containing the following terms:',keywords,keywords)
+
+
+
+
 bp  = pd.read_csv('data/Bike Program.csv')
 ral = pd.read_csv('data/2023_DispatchActivities.csv')
 
@@ -20,81 +31,90 @@ bp = bp[['partner','type','unit','order','bikes']]
 bp = bp[~pd.isna(bp.order)]
 bp = bp[~pd.isna(bp.bikes)]
 
-# bar                = pd.merge(bap, ral, left_on='ORDER', right_on='RentalAgreementID', how='left')
-# bar.columns        = ['partner','type','unit','order','remove','date','Service','Office Note','Driver Note']
-# bar                = bar.drop(columns=['remove'])
-# bar                = bar[~bar['Service'].str.contains('GART', na=False)]
-# bar['Office Note'] = bar['Office Note'].str.upper()
-# bar['Driver Note'] = bar['Driver Note'].str.upper()
-# bar['date']        = pd.to_datetime(bar['date']).dt.date
-
-
-bar                = pd.merge(bp, ral, left_on='order', right_on='RentalAgreementID', how='left')
+bar                = pd.merge(bp, ral, left_on='order', right_on='RentalAgreementID', how='right')
 bar.columns        = ['partner','type','unit','order','bikes','remove','date','Service','Office Note','Driver Note']
 bar                = bar.drop(columns=['remove'])
 bar                = bar[~bar['Service'].str.contains('GART', na=False)]
 bar['Office Note'] = bar['Office Note'].str.upper()
 bar['Driver Note'] = bar['Driver Note'].str.upper()
 bar['date']        = pd.to_datetime(bar['date']).dt.date
+bar                = bar.dropna(subset=['partner','type','unit','order','bikes'])
 
-left, right = st.columns(2)
-start = left.date_input('Start Date', pd.to_datetime('01/01/2023'))
-end   = right.date_input('End Date', pd.to_datetime('09/13/2023'))
+def GetBikesTouched(row):
+    if 'BIKE CHECK' in row.Service: return int(row.bikes)
+    return 1
 
-bar   = bar[(bar['date'] >= start) & (bar['date'] <= end)]
+bar['touched']    = bar.apply(GetBikesTouched, axis=1)
 
-pivot = pd.pivot_table(bar, values='partner', index='Service', columns='type', aggfunc='count')
-
-
-st.header('Service By Bike Type', help='Service items that occur on house bike agreements by bike type are counted here.')
-st.dataframe(pivot, use_container_width=True)
-
-st.subheader('Bike Types of Interest')
-left, middle_left, middle_right, right = st.columns(4)
-left.metric('2022 Vacayzen TAXI', np.sum(pivot['2022 Vacayzen TAXI']))
-middle_left.metric('Generic New Wave', np.sum(pivot['Generic New Wave']))
-middle_right.metric('Vacayzen New Wave', np.sum(pivot['Vacayzen New Wave']))
-right.metric('Yellow 360 YOLO', np.sum(pivot['Yellow 360 YOLO']))
-
-st.download_button('DOWNLOAD SERVICE BY BIKE TYPE',pivot.to_csv(),'ServiceByBikeType.csv',use_container_width=True)
-
-st.header('Service By Bike Type With Keywords', help='If the sales team\'s service item note includes one of the following keywords, it is counted here.')
-
-keywords = ['CHAIN','CHAIN GUARD','CHAINGUARD','TIRE','PEDAL','PEDAL ARM','PEDALARM','HANDLEBAR','HANDLE BAR','AIR']
-options = st.multiselect('Look for office notes containing the following terms:',keywords,keywords)
-
-search = '|'.join(options)
-
-def OfficeNoteContainsKeyword(row):
+def ServiceNoteContainsKeyword(row):
      for option in options:
          if option in str(row['Office Note']):
              return True
          
      return False
 
-bar['hasKeyword'] = bar.apply(OfficeNoteContainsKeyword, axis=1)
+if isKeyword:
+    bar['hasKeyword'] = bar.apply(ServiceNoteContainsKeyword, axis=1)
 
-key = bar[bar['hasKeyword']]
-key = key[['partner','type','unit','order','date','Service','Office Note','Driver Note']]
-pivot_key = pd.pivot_table(key, values='partner', index='Service', columns='type', aggfunc='count')
 
-st.dataframe(pivot_key, use_container_width=True)
+bar   = bar[(bar['date'] >= start) & (bar['date'] <= end)]
 
-st.subheader('Bike Types of Interest')
+
+
+st.header('Services By Bike Type', help='Service items that occur on house bike agreements by bike type are counted here.')
+
+if isKeyword: key = bar[bar['hasKeyword']]
+else:         key = bar
+
+pivot = pd.pivot_table(bar, values='partner', index='Service', columns='type', aggfunc='count')
+st.dataframe(pivot, use_container_width=True)
+
+st.write('**Bike Types of Interest**')
 left, middle_left, middle_right, right = st.columns(4)
-left.metric('2022 Vacayzen TAXI', np.sum(pivot_key['2022 Vacayzen TAXI']))
-middle_left.metric('Generic New Wave', np.sum(pivot_key['Generic New Wave']))
-middle_right.metric('Vacayzen New Wave', np.sum(pivot_key['Vacayzen New Wave']))
-right.metric('Yellow 360 YOLO', np.sum(pivot_key['Yellow 360 YOLO']))
+left.metric('2022 Vacayzen TAXI', np.sum(pivot['2022 Vacayzen TAXI']))
+middle_left.metric('Generic New Wave', np.sum(pivot['Generic New Wave']))
+middle_right.metric('Vacayzen New Wave', np.sum(pivot['Vacayzen New Wave']))
+right.metric('Yellow 360 YOLO', np.sum(pivot['Yellow 360 YOLO']))
 
-st.download_button('DOWNLOAD SERVICE BY BIKE TYPE WITH KEYWORDS',pivot_key.to_csv(),'ServiceByTypeWithBikeKeywords.csv',use_container_width=True)
+st.download_button('DOWNLOAD SERVICES BY BIKE TYPE',pivot.to_csv(),'Services By Bike Type.csv',use_container_width=True)
 
-st.header('Dispatches with Keywords in Sales Notes')
+
+
+st.header('Bike Touches By Service', help='The number of bikes "touched" during service items.')
+
+if isKeyword: touch = bar[bar['hasKeyword']]
+else:         touch = bar
+
+touch = touch[['partner','type','unit','bikes','order','date','Service','Office Note','Driver Note','touched']]
+
+st.info('Any **bike check** service assumes a driver touches **each bike at the respective property**.')
+st.info('Any **non-bike-check** service assumes a driver touches **one bike**.')
+
+pivot_touch = pd.pivot_table(touch, values='touched', index='Service', columns='type', aggfunc='sum')
+st.dataframe(pivot_touch)
+
+st.write('**Bike Types of Interest**')  
+left, middle_left, middle_right, right = st.columns(4)
+left.metric('2022 Vacayzen TAXI', np.sum(pivot_touch['2022 Vacayzen TAXI']))
+middle_left.metric('Generic New Wave', np.sum(pivot_touch['Generic New Wave']))
+middle_right.metric('Vacayzen New Wave', np.sum(pivot_touch['Vacayzen New Wave']))
+right.metric('Yellow 360 YOLO', np.sum(pivot_touch['Yellow 360 YOLO']))
+
+st.download_button('DOWNLOAD BIKE TOUCHES BY SERVICE',pivot.to_csv(),'Bike Touches By Service.csv',use_container_width=True)
+
+
+
+st.header('Dispatches By Bike Type')
+
+if isKeyword: key = bar[bar['hasKeyword']]
+else:         key = bar
+
+key = key[['partner','type','unit','order','date','Service','Office Note','Driver Note']]
 option_type = st.selectbox('Bike Type',key.type.unique())
 
-key = key[key['type'] == option_type]
-key = key[['Service','Office Note','Driver Note','date','partner','unit','order']]
-key.columns = ['Service','Office Note','Driver Note','Date','Partner','Unit','Order']
+dispatches = key[key['type'] == option_type]
+dispatches = dispatches[['Service','Office Note','Driver Note','date','partner','unit','order']]
+dispatches.columns = ['Service','Office Note','Driver Note','Date','Partner','Unit','Order']
 
-st.dataframe(key, use_container_width=True)
-st.download_button('DOWNLOAD DISPATCHES WITH KEYWORDS IN SALES NOTES',key.to_csv(),'DispatchesWithKeyWordsInSalesNotes.csv',use_container_width=True)
+st.dataframe(dispatches, use_container_width=True)
+st.download_button('DOWNLOAD DISPATCHES BY BIKE TYPE',dispatches.to_csv(),'Dispatches By Bike Type.csv',use_container_width=True)
