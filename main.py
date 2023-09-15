@@ -4,23 +4,24 @@ import numpy as np
 
 st.set_page_config(
     page_title='House Bike Analysis',
-    page_icon='🚲'
+    page_icon='🚲',
+    initial_sidebar_state='expanded'
 )
 
+bp  = pd.read_csv('data/Bike Program.csv')
+ral = pd.read_csv('data/2023_DispatchActivities.csv')
+
 with st.sidebar:
-    start = st.date_input('Start Date', pd.to_datetime('01/01/2023'))
-    end   = st.date_input('End Date', pd.to_datetime('09/13/2023'))
+    min   = ral.Dispatch.min()
+    max   = ral.Dispatch.max()
+    start = st.date_input('Start Date', pd.to_datetime(min), min_value=pd.to_datetime(min))
+    end   = st.date_input('End Date', pd.to_datetime(max), max_value=pd.to_datetime(max))
     isKeyword = st.toggle('Filter on Keywords',value=True)
 
     if isKeyword:
         keywords = ['CHAIN','CHAIN GUARD','CHAINGUARD','TIRE','PEDAL','PEDAL ARM','PEDALARM','HANDLEBAR','HANDLE BAR','AIR']
         options = st.multiselect('Look for service instructions containing the following terms:',keywords,keywords)
 
-
-
-
-bp  = pd.read_csv('data/Bike Program.csv')
-ral = pd.read_csv('data/2023_DispatchActivities.csv')
 
 st.title('House Bike Analysis')
 st.info('An insight on the bike types on Vacayzen\'s House Bike Program.')
@@ -61,7 +62,7 @@ bar   = bar[(bar['date'] >= start) & (bar['date'] <= end)]
 
 
 
-st.header('Services By Bike Type', help='Service items that occur on house bike agreements by bike type are counted here.')
+st.header('Services by Bike Type', help='Service items that occur on house bike agreements by bike type are counted here.')
 
 if isKeyword: key = bar[bar['hasKeyword']]
 else:         key = bar
@@ -80,7 +81,7 @@ st.download_button('DOWNLOAD SERVICES BY BIKE TYPE',pivot.to_csv(),'Services By 
 
 
 
-st.header('Bike Touches By Service', help='The number of bikes "touched" during service items.')
+st.header('Bike Touches by Service', help='The number of bikes "touched" during service items.')
 
 if isKeyword: touch = bar[bar['hasKeyword']]
 else:         touch = bar
@@ -104,7 +105,7 @@ st.download_button('DOWNLOAD BIKE TOUCHES BY SERVICE',pivot.to_csv(),'Bike Touch
 
 
 
-st.header('Dispatches By Bike Type')
+st.header('Dispatches by Bike Type', help='Any dispatch service notes and correlating driver notes for service done on each bike type.')
 
 if isKeyword: key = bar[bar['hasKeyword']]
 else:         key = bar
