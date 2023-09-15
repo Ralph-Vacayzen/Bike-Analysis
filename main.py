@@ -12,8 +12,8 @@ bp  = pd.read_csv('data/Bike Program.csv')
 ral = pd.read_csv('data/2023_DispatchActivities.csv')
 
 with st.sidebar:
-    min   = ral.Dispatch.min()
-    max   = ral.Dispatch.max()
+    min   = pd.to_datetime(ral.Dispatch).min()
+    max   = pd.to_datetime(ral.Dispatch).max()
     start = st.date_input('Start Date', pd.to_datetime(min), min_value=pd.to_datetime(min))
     end   = st.date_input('End Date', pd.to_datetime(max), max_value=pd.to_datetime(max))
     isKeyword = st.toggle('Filter on Keywords',value=True)
@@ -33,7 +33,7 @@ bp = bp[~pd.isna(bp.order)]
 bp = bp[~pd.isna(bp.bikes)]
 
 bar                = pd.merge(bp, ral, left_on='order', right_on='RentalAgreementID', how='right')
-bar.columns        = ['partner','type','unit','order','bikes','remove','date','Service','Office Note','Driver Note']
+bar.columns        = ['partner','type','unit','order','bikes','origin','remove','customer','date','Service','Office Note','Driver Note']
 bar                = bar.drop(columns=['remove'])
 bar                = bar[~bar['Service'].str.contains('GART', na=False)]
 bar['Office Note'] = bar['Office Note'].str.upper()
