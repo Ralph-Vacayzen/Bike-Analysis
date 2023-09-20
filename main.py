@@ -23,6 +23,7 @@ with st.sidebar:
         options = st.multiselect('Look for service instructions containing the following terms:',keywords,keywords)
 
 
+st.caption('VACAYZEN')
 st.title('House Bike Analysis')
 st.info('An insight on the bike types on Vacayzen\'s House Bike Program.')
 st.warning('Emphasis on the four, newer bike types. See *Bike Types of Interest* sections.')
