@@ -67,7 +67,7 @@ st.header('Services by Bike Type', help='Service items that occur on house bike 
 if isKeyword: key = bar[bar['hasKeyword']]
 else:         key = bar
 
-pivot = pd.pivot_table(bar, values='partner', index='Service', columns='type', aggfunc='count')
+pivot = pd.pivot_table(key, values='partner', index='Service', columns='type', aggfunc='count')
 st.dataframe(pivot, use_container_width=True)
 
 st.write('**Bike Types of Interest**')
