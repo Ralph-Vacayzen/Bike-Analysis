@@ -119,3 +119,29 @@ dispatches.columns = ['Service','Office Note','Driver Note','Date','Partner','Un
 
 st.dataframe(dispatches, use_container_width=True)
 st.download_button('DOWNLOAD DISPATCHES BY BIKE TYPE',dispatches.to_csv(),'Dispatches By Bike Type.csv',use_container_width=True)
+
+
+st.header('Efficiency by Bike Type', help='(All non-check and non-delivery services) over (all check and delivery services).')
+
+st.latex(r'efficiency = \left(1 - \frac{services}{deliveries + checks}\right) * 100')
+
+efficient = bar
+
+pivot_efficient = pd.pivot_table(efficient, values='partner', index='Service', columns='type', aggfunc='count')
+pivot_efficient = pivot_efficient.fillna(0)
+
+def GetEfficiency(column):
+    numerator   = np.sum(column)
+    denominator = column['DELIVERY'] + column['BACKPACK & BIKE CHECK']+ column['BIKE CHECK'] + column['BIKE CHECK - ALAYA'] + column['BIKE CHECK - OWNER ARRIVAL']
+    numerator   = numerator - denominator
+
+    return round((1 - (numerator / denominator)) * 100,2)
+
+efficiency = pivot_efficient.apply(GetEfficiency)
+efficiency = pd.DataFrame(efficiency)
+efficiency.index.names = ['Type']
+efficiency.columns = ['Efficiency']
+efficiency = efficiency.sort_values(by='Efficiency',ascending=False)
+
+st.dataframe(efficiency, use_container_width=True)
+st.download_button('DOWNLOAD EFFICIENCY BY BIKE TYPE',efficiency.to_csv(),'Efficiency By Bike Type.csv',use_container_width=True)
