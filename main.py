@@ -16,11 +16,22 @@ with st.sidebar:
     max   = pd.to_datetime(ral.Dispatch).max()
     start = st.date_input('Start Date', pd.to_datetime(min), min_value=pd.to_datetime(min))
     end   = st.date_input('End Date', pd.to_datetime(max), max_value=pd.to_datetime(max))
-    isKeyword = st.toggle('Filter on Keywords',value=True)
 
-    if isKeyword:
+    isIncludingKeyword = st.toggle('Filter including Keywords',value=False)
+
+    if isIncludingKeyword:
         keywords = ['CHAIN','CHAIN GUARD','CHAINGUARD','TIRE','PEDAL','PEDAL ARM','PEDALARM','HANDLEBAR','HANDLE BAR','AIR']
-        options = st.multiselect('Look for service instructions containing the following terms:',keywords,keywords)
+        options  = st.multiselect('Look for service instructions containing the following terms:',keywords,keywords)
+    
+    # st.divider()
+    # st.write('**BELOW IS IN THE WORKS**')
+    # isIgnoringKeyword  = st.toggle('Filter ignoring Keywords',value=False)
+
+    # if isIgnoringKeyword:
+    #     keywords = ['LOCK']
+    #     options = st.multiselect('Ignore service instructions containing the following terms:',keywords,keywords)
+    
+    
 
 
 st.caption('VACAYZEN')
@@ -55,7 +66,7 @@ def ServiceNoteContainsKeyword(row):
          
      return False
 
-if isKeyword:
+if isIncludingKeyword:
     bar['hasKeyword'] = bar.apply(ServiceNoteContainsKeyword, axis=1)
 
 
@@ -65,8 +76,8 @@ bar   = bar[(bar['date'] >= start) & (bar['date'] <= end)]
 
 st.header('Services by Bike Type', help='Service items that occur on house bike agreements by bike type are counted here.')
 
-if isKeyword: key = bar[bar['hasKeyword']]
-else:         key = bar
+if isIncludingKeyword: key = bar[bar['hasKeyword']]
+else:                  key = bar
 
 pivot = pd.pivot_table(key, values='partner', index='Service', columns='type', aggfunc='count')
 st.dataframe(pivot, use_container_width=True)
@@ -84,7 +95,7 @@ st.download_button('DOWNLOAD SERVICES BY BIKE TYPE',pivot.to_csv(),'Services By 
 
 st.header('Bike Touches by Service', help='The number of bikes "touched" during service items.')
 
-if isKeyword: touch = bar[bar['hasKeyword']]
+if isIncludingKeyword: touch = bar[bar['hasKeyword']]
 else:         touch = bar
 
 touch = touch[['partner','type','unit','bikes','order','date','Service','Office Note','Driver Note','touched']]
@@ -108,8 +119,8 @@ st.download_button('DOWNLOAD BIKE TOUCHES BY SERVICE',pivot.to_csv(),'Bike Touch
 
 st.header('Dispatches by Bike Type', help='Any dispatch service notes and correlating driver notes for service done on each bike type.')
 
-if isKeyword: key = bar[bar['hasKeyword']]
-else:         key = bar
+if isIncludingKeyword: key = bar[bar['hasKeyword']]
+else:                  key = bar
 
 key = key[['partner','type','unit','order','date','Service','Office Note','Driver Note']]
 option_type = st.selectbox('Bike Type',key.type.unique())
@@ -131,18 +142,40 @@ efficient = bar
 pivot_efficient = pd.pivot_table(efficient, values='partner', index='Service', columns='type', aggfunc='count')
 pivot_efficient = pivot_efficient.fillna(0)
 
+e = pivot_efficient.reset_index()
+
+def IsDenominatorService(row):
+    return 'BIKE CHECK' in row.Service or row.Service == 'DELIVERY'
+
+e['isDenominator'] = e.apply(IsDenominatorService, axis=1)
+
+def IsNumeratorService(row):
+    return not row.isDenominator
+
+e['isNumerator']   = e.apply(IsNumeratorService, axis=1)
+
+den = e[e.isDenominator]['Service'].unique()
+num = e[e.isNumerator  ]['Service'].unique()
+
+with st.sidebar:
+    with st.expander('Effenciency Metric'):
+        num_options = st.multiselect('Efficiency Numerator',   options=e.Service.unique(), default=num)
+        den_options = st.multiselect('Efficiency Denominator', options=e.Service.unique(), default=den)
+
 def GetEfficiency(column):
-    numerator   = np.sum(column)
-    denominator = column['DELIVERY'] + column['BACKPACK & BIKE CHECK']+ column['BIKE CHECK'] + column['BIKE CHECK - ALAYA'] + column['BIKE CHECK - OWNER ARRIVAL']
-    numerator   = numerator - denominator
+    global num_options
+    global den_options
+
+    numerator   = np.sum(column[num_options])
+    denominator = np.sum(column[den_options])
 
     return round((1 - (numerator / denominator)) * 100,2)
 
-efficiency = pivot_efficient.apply(GetEfficiency)
-efficiency = pd.DataFrame(efficiency)
+efficiency             = pivot_efficient.apply(GetEfficiency)
+efficiency             = pd.DataFrame(efficiency)
 efficiency.index.names = ['Type']
-efficiency.columns = ['Efficiency']
-efficiency = efficiency.sort_values(by='Efficiency',ascending=False)
+efficiency.columns     = ['Efficiency']
+efficiency             = efficiency.sort_values(by='Efficiency',ascending=False)
 
 st.dataframe(efficiency, use_container_width=True)
 st.download_button('DOWNLOAD EFFICIENCY BY BIKE TYPE',efficiency.to_csv(),'Efficiency By Bike Type.csv',use_container_width=True)
