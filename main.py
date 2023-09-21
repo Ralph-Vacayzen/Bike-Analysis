@@ -20,18 +20,15 @@ with st.sidebar:
     isIncludingKeyword = st.toggle('Filter including Keywords',value=False)
 
     if isIncludingKeyword:
-        keywords = ['CHAIN','CHAIN GUARD','CHAINGUARD','TIRE','PEDAL','PEDAL ARM','PEDALARM','HANDLEBAR','HANDLE BAR','AIR']
-        options  = st.multiselect('Look for service instructions containing the following terms:',keywords,keywords)
-    
-    # st.divider()
-    # st.write('**BELOW IS IN THE WORKS**')
-    # isIgnoringKeyword  = st.toggle('Filter ignoring Keywords',value=False)
+        include_keywords = ['CHAIN','CHAIN GUARD','CHAINGUARD','TIRE','PEDAL','PEDAL ARM','PEDALARM','HANDLEBAR','HANDLE BAR','AIR']
+        include_options  = st.multiselect('Look for service instructions containing the following terms:',include_keywords,include_keywords)
 
-    # if isIgnoringKeyword:
-    #     keywords = ['LOCK']
-    #     options = st.multiselect('Ignore service instructions containing the following terms:',keywords,keywords)
-    
-    
+
+    isIgnoringKeyword  = st.toggle('Filter ignoring Keywords',value=False)
+
+    if isIgnoringKeyword:
+        ignore_keywords = ['LOCK']
+        ignore_options = st.multiselect('Ignore service instructions containing the following terms:',ignore_keywords,ignore_keywords)
 
 
 st.caption('VACAYZEN')
@@ -59,15 +56,26 @@ def GetBikesTouched(row):
 
 bar['touched']    = bar.apply(GetBikesTouched, axis=1)
 
-def ServiceNoteContainsKeyword(row):
-     for option in options:
+def ServiceNoteContainsIncludingKeyword(row):
+     for option in include_keywords:
          if option in str(row['Office Note']):
              return True
          
      return False
 
 if isIncludingKeyword:
-    bar['hasKeyword'] = bar.apply(ServiceNoteContainsKeyword, axis=1)
+    bar['hasIncludingKeyword'] = bar.apply(ServiceNoteContainsIncludingKeyword, axis=1)
+
+
+def ServiceNoteContainsIgnoreKeyword(row):
+     for option in ignore_keywords:
+         if option in str(row['Office Note']):
+             return True
+         
+     return False
+
+if isIgnoringKeyword:
+    bar['hasIgnoringKeyword'] = bar.apply(ServiceNoteContainsIgnoreKeyword, axis=1)
 
 
 bar   = bar[(bar['date'] >= start) & (bar['date'] <= end)]
@@ -76,8 +84,9 @@ bar   = bar[(bar['date'] >= start) & (bar['date'] <= end)]
 
 st.header('Services by Bike Type', help='Service items that occur on house bike agreements by bike type are counted here.')
 
-if isIncludingKeyword: key = bar[bar['hasKeyword']]
-else:                  key = bar
+key = bar
+if isIncludingKeyword: key = key[bar['hasIncludingKeyword']]
+if isIgnoringKeyword:  key = key[~bar['hasIgnoringKeyword']]
 
 pivot = pd.pivot_table(key, values='partner', index='Service', columns='type', aggfunc='count')
 st.dataframe(pivot, use_container_width=True)
@@ -157,10 +166,12 @@ e['isNumerator']   = e.apply(IsNumeratorService, axis=1)
 den = e[e.isDenominator]['Service'].unique()
 num = e[e.isNumerator  ]['Service'].unique()
 
+
 with st.sidebar:
     with st.expander('Effenciency Metric'):
         num_options = st.multiselect('Efficiency Numerator',   options=e.Service.unique(), default=num)
         den_options = st.multiselect('Efficiency Denominator', options=e.Service.unique(), default=den)
+
 
 def GetEfficiency(column):
     global num_options
