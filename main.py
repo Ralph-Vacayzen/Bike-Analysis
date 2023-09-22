@@ -104,8 +104,9 @@ st.download_button('DOWNLOAD SERVICES BY BIKE TYPE',pivot.to_csv(),'Services By 
 
 st.header('Bike Touches by Service', help='The number of bikes "touched" during service items.')
 
-if isIncludingKeyword: touch = bar[bar['hasKeyword']]
-else:         touch = bar
+touch = bar
+if isIncludingKeyword: touch = touch[bar['hasIncludingKeyword']]
+if isIgnoringKeyword:  touch = touch[~bar['hasIgnoringKeyword']]
 
 touch = touch[['partner','type','unit','bikes','order','date','Service','Office Note','Driver Note','touched']]
 
@@ -128,13 +129,14 @@ st.download_button('DOWNLOAD BIKE TOUCHES BY SERVICE',pivot.to_csv(),'Bike Touch
 
 st.header('Dispatches by Bike Type', help='Any dispatch service notes and correlating driver notes for service done on each bike type.')
 
-if isIncludingKeyword: key = bar[bar['hasKeyword']]
-else:                  key = bar
+dispatch = bar
+if isIncludingKeyword: dispatch = dispatch[bar['hasIncludingKeyword']]
+if isIgnoringKeyword:  dispatch = dispatch[~bar['hasIgnoringKeyword']]
 
-key = key[['partner','type','unit','order','date','Service','Office Note','Driver Note']]
-option_type = st.selectbox('Bike Type',key.type.unique())
+dispatch = dispatch[['partner','type','unit','order','date','Service','Office Note','Driver Note']]
+option_type = st.selectbox('Bike Type',dispatch.type.unique())
 
-dispatches = key[key['type'] == option_type]
+dispatches = dispatch[dispatch['type'] == option_type]
 dispatches = dispatches[['Service','Office Note','Driver Note','date','partner','unit','order']]
 dispatches.columns = ['Service','Office Note','Driver Note','Date','Partner','Unit','Order']
 
